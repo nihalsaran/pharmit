@@ -224,7 +224,7 @@ class OfflineScreen extends StatelessWidget {
           onTap: () => exit(0), // Exit the app
         ),
         title: const Text(
-          'SAi LiFE CHEMiST',
+          'PharmIt',
           style: TextStyle(color: Colors.black, fontSize: 25),
         ),
         centerTitle: true,

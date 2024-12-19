@@ -43,7 +43,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
               onTap: () => exit(0)),
           title: const Text(
-            'SAi LiFE CHEMiST',
+            'PharmIt',
             style: TextStyle(color: Colors.white, fontSize: 25),
           ),
           centerTitle: true,
