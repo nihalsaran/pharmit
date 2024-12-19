@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-// import 'package:sai_life/screens/admin_login.dart';
+import 'package:pharmit/screens/admin_login.dart';
 // import 'package:sai_life/screens/login_otp.dart';
 
 class Login extends StatefulWidget {
@@ -193,11 +193,11 @@ class _LoginState extends State<Login> {
                                   borderRadius: BorderRadius.circular(5.0),
                                   side: const BorderSide(color: Colors.teal)))),
                       onPressed: () {
-                        // Navigator.push(
-                        //   context,
-                        //   MaterialPageRoute(
-                        //       builder: (context) => const AdminLogin()),
-                        // );
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const AdminLogin()),
+                        );
                       },
                       child: const Text(
                         'Are you a Service Partner? Login here',

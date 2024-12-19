@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
-// import 'package:sai_life/Admin/AdminDashboard/admin_home.dart';
+import 'package:pharmit/Admin/AdminDashboard/admin_home.dart';
 // import 'package:sai_life/Admin/AdminDashboard/admin_product.dart';
 // import 'package:sai_life/Admin/AdminDashboard/admin_profile.dart';
 // import 'package:sai_life/Admin/AdminDashboard/all_orders.dart';
@@ -18,7 +18,7 @@ class AdminDashboard extends StatefulWidget {
 class _AdminDashboardState extends State<AdminDashboard> {
   int _selectedIndex = 0;
   static const List<Widget> _widgetOptions = <Widget>[
-    // AdminHome(),
+    AdminHome(),
     // AllOrders(),
     // AdminProduct(),
     // AdminProfile()
