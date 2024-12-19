@@ -1,125 +1,245 @@
-import 'package:flutter/material.dart';
+// ignore_for_file: use_build_context_synchronously
 
-void main() {
-  runApp(const MyApp());
+import 'dart:async';
+import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:fancy_cart/fancy_cart.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+// Import your existing screens/pages
+import 'package:pharmit/Admin/admin_main.dart';
+// import 'package:pharmit/screens/dashboard.dart';
+import 'package:pharmit/screens/signin.dart';
+
+// Main entry point of the application
+void main() async {
+  // Ensure Flutter binding is initialized before Firebase
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
+  await Firebase.initializeApp();
+  
+  // Lock the app to portrait orientation
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  
+  // Initialize the fancy cart package
+  initializeFancyCart(
+    child: const MyApp(),
+  );
 }
 
+// Root application widget
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    // Configure system UI overlay styles
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.white,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ));
+
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Splash Screen',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+        primarySwatch: Colors.teal,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const SplashScreen(),
+      debugShowCheckedModeBanner: false,
+      // Adjust text scaling factor for better readability
+      builder: (context, child) {
+        final mediaQueryData = MediaQuery.of(context);
+        final scale = mediaQueryData.textScaleFactor.clamp(0.8, 0.9);
+        return MediaQuery(
+          data: mediaQueryData.copyWith(textScaleFactor: scale),
+          child: child!,
+        );
+      },
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+// Splash Screen Widget
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _SplashScreenState extends State<SplashScreen> {
+  // Connectivity logging method
+  Future<void> logConnectivityDetails() async {
+    try {
+      // Get the current connectivity result
+      var connectivityResult = await (Connectivity().checkConnectivity());
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      // Comprehensive logging of network status
+      print('==== Detailed Network Connectivity Check ====');
+      print('Raw Connectivity Result: $connectivityResult');
+
+      // Detailed breakdown of connectivity status
+
+      // Additional check to verify actual internet connectivity
+      try {
+        final result = await InternetAddress.lookup('google.com');
+        print('Internet Reachability: ${result.isNotEmpty && result[0].rawAddress.isNotEmpty}');
+        print('Ping Test Result Addresses: ${result.map((address) => address.rawAddress).join(', ')}');
+      } on SocketException catch (e) {
+        print('Internet Connectivity Check Failed');
+        print('Socket Exception Details: ${e.toString()}');
+      }
+    } catch (e) {
+      print('Unexpected Error During Connectivity Logging: ${e.toString()}');
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    
+    Timer(const Duration(seconds: 1), () async {
+      try {
+        // Log detailed connectivity information
+        await logConnectivityDetails();
+
+        // Check connectivity
+        var connectivityResult = await (Connectivity().checkConnectivity());
+
+        // Verify internet connection
+        if (connectivityResult != ConnectivityResult.none) {
+          // Listen to authentication state changes
+          FirebaseAuth.instance.authStateChanges().listen((User? user) async {
+            if (user == null) {
+              // No user signed in, navigate to login
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const Login()),
+              );
+            } else {
+              // Check if user is an admin
+              final userSnapshot = await FirebaseFirestore.instance
+                  .collection('Admin')
+                  .doc(FirebaseAuth.instance.currentUser!.uid)
+                  .get();
+
+              if (userSnapshot.exists) {
+                if (userSnapshot.data()!['admin'] == true) {
+                  if (mounted) {
+                    // Navigate to admin dashboard
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AdminDashboard()),
+                      (Route<dynamic> route) => false,
+                    );
+                  }
+                }
+              } else {
+                if (mounted) {
+                  // Navigate to regular dashboard
+                  // Navigator.pushAndRemoveUntil(
+                  //   context,
+                  //   MaterialPageRoute(builder: (context) => const Dashboard()),
+                  //   (Route<dynamic> route) => false,
+                  // );
+                }
+              }
+            }
+          });
+        } else {
+          // No internet connection
+          print('No network connection available. Navigating to Offline Screen.');
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const OfflineScreen()),
+            (Route<dynamic> route) => false,
+          );
+        }
+      } catch (e) {
+        // Catch any unexpected errors
+        print('Unexpected Error in Connectivity Check: ${e.toString()}');
+        
+        // Navigate to offline screen as a fallback
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const OfflineScreen()),
+          (Route<dynamic> route) => false,
+        );
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
+      backgroundColor: Colors.lightGreen.shade100,
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+        child: Container(
+          margin: const EdgeInsets.only(left: 20, right: 20),
+          alignment: Alignment.center,
+          child: const Image(
+            width: double.infinity,
+            image: AssetImage("assets/logos/splash_screen_logo.png"),
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+}
+
+// Offline Screen Widget
+class OfflineScreen extends StatelessWidget {
+  const OfflineScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Set system UI overlay style
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.white,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ));
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        leading: GestureDetector(
+          child: const Icon(
+            Icons.arrow_back_ios,
+            color: Colors.black,
+            size: 20,
+          ),
+          onTap: () => exit(0), // Exit the app
+        ),
+        title: const Text(
+          'SAi LiFE CHEMiST',
+          style: TextStyle(color: Colors.black, fontSize: 25),
+        ),
+        centerTitle: true,
+        elevation: 0.0,
+        backgroundColor: Colors.transparent,
+      ),
+      body: const Center(
+        child: Text(
+          'Please check your internet connection.',
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.black87,
+          ),
+        ),
+      ),
     );
   }
 }
