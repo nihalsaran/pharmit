@@ -13,7 +13,7 @@ import 'package:flutter/services.dart';
 
 // Import your existing screens/pages
 import 'package:pharmit/Admin/admin_main.dart';
-// import 'package:pharmit/screens/dashboard.dart';
+import 'package:pharmit/screens/dashboard.dart';
 import 'package:pharmit/screens/signin.dart';
 
 // Main entry point of the application
@@ -148,11 +148,11 @@ class _SplashScreenState extends State<SplashScreen> {
               } else {
                 if (mounted) {
                   // Navigate to regular dashboard
-                  // Navigator.pushAndRemoveUntil(
-                  //   context,
-                  //   MaterialPageRoute(builder: (context) => const Dashboard()),
-                  //   (Route<dynamic> route) => false,
-                  // );
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const Dashboard()),
+                    (Route<dynamic> route) => false,
+                  );
                 }
               }
             }
